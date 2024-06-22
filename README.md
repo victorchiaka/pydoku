@@ -1,2 +1,3 @@
 # pydoku
-A sudoku game for Linux gnome
+
+Pydoku is a Sudoku puzzle game developed in Python using GTK.

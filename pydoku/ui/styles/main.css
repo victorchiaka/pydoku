@@ -1,0 +1,18 @@
+.difficulty-label {
+  font-size: 25px;
+  font-weight: bolder;
+  margin-bottom: 20px;
+}
+
+.difficulty-button {
+  font-size: 20px;
+  border-radius: 3px;
+  padding-top: 9px;
+  padding-bottom: 15px;
+}
+
+.grid-type-button {
+  padding: 90px;
+  border-radius: 3px;
+  font-size: 16px;
+}
