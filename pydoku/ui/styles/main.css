@@ -5,7 +5,7 @@
 }
 
 .difficulty-button {
-  font-size: 20px;
+  font-size: 15px;
   border-radius: 3px;
   padding-top: 9px;
   padding-bottom: 15px;
@@ -15,4 +15,41 @@
   padding: 90px;
   border-radius: 3px;
   font-size: 16px;
+}
+
+.time-label {
+  font-size: 30px;
+}
+
+.action-button {
+  padding: 8px 20px;
+  font-size: 15px;
+}
+/* Styling the entries (cells) */
+entry {
+  border-radius: 0px;
+}
+
+.six-by-six-cell {
+  font-size: 40px;
+}
+
+.nine-by-nine-cell {
+  font-size: 25px;
+}
+
+.top-border {
+  border-top: 1.8px solid black;
+}
+
+.bottom-border {
+  border-bottom: 1.8px solid black;
+}
+
+.left-border {
+  border-left: 1.8px solid black;
+}
+
+.right-border {
+  border-right: 1.8px solid black;
 }
