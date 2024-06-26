@@ -1,6 +1,7 @@
 import gi
 
 from algorithms.generator import Generator
+from algorithms.solver import Solver
 from .game_frame import GridFrame, SideFrame
 
 gi.require_version(namespace="Gtk", version="4.0")
@@ -108,15 +109,25 @@ class MainApplication(Gtk.Application):
         board: list[list[int | str]] = Generator(
             difficulty=difficulty, size=self.board_size
         ).generate_board()
-        for row in board:
-            print(row)
+
+        board_copy: list[list[int | str]] = [
+            [0 for _ in range(self.board_size)] for _ in range(self.board_size)
+        ]
+
+        for row in range(self.board_size):
+            for column in range(self.board_size):
+                board_copy[row][column] = board[row][column]
+
+        solved_board: list[list[int | str]] = Solver(
+            board=board_copy, size=self.board_size
+        ).solve_board()
 
         game_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
 
         if not self.window:
             self.window = MainApplicationWindow(application=self, title="Pydoku")
             self.window.set_child(self.game_box)
-        grid_frame = GridFrame(board, self.board_size)
+        grid_frame = GridFrame(board, solved_board, self.board_size)
         game_box.append(grid_frame)
 
         side_frame = SideFrame()

@@ -7,16 +7,15 @@ from math import floor, sqrt
 
 
 class GridFrame(Gtk.Frame):
-    def __init__(self, board, board_size, **kwargs) -> None:
+    def __init__(self, board, solved_board, board_size, **kwargs) -> None:
         super().__init__(**kwargs)
         self.set_hexpand(True)
         self.set_vexpand(True)
+        self.add_css_class("grid-frame")
 
         grid = Gtk.Grid()
         grid.set_column_homogeneous(True)
         grid.set_row_homogeneous(True)
-
-        subgrid_size: int = floor(sqrt(board_size))
 
         if board_size == 6:
             subgrid_rows, subgrid_cols = 2, 3
@@ -35,6 +34,14 @@ class GridFrame(Gtk.Frame):
                 entry.set_max_width_chars(1)
                 entry.set_width_chars(1)
                 entry.set_alignment(0.5)
+                entry_text: str = str(board[row][column])
+                if entry_text == "0":
+                    entry_text = ""
+                    entry.set_text(entry_text)
+                else:
+                    entry.set_text(entry_text)
+                    entry.set_editable(False)
+                    entry.add_css_class("filled-entry")
                 grid.attach(entry, column, row, 1, 1)
 
                 if row % subgrid_rows == 0 and row != 0:
