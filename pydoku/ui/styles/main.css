@@ -28,6 +28,13 @@
 /* Styling the entries (cells) */
 entry {
   border-radius: 0px;
+  border: 0.5px solid gray;
+  padding: 0px;
+}
+
+.filled-entry {
+  background-color: antiquewhite;
+  color: black;
 }
 
 .six-by-six-cell {
@@ -52,4 +59,13 @@ entry {
 
 .right-border {
   border-right: 1.8px solid black;
+}
+
+frame {
+  border-radius: 0px;
+}
+
+.grid-frame {
+  padding: 20px;
+  border: 0px;
 }
