@@ -33,7 +33,7 @@ entry {
 }
 
 .filled-entry {
-  background-color: antiquewhite;
+  background-color: rgba(90, 90, 90, 0.438);
   color: black;
 }
 
@@ -46,19 +46,28 @@ entry {
 }
 
 .top-border {
-  border-top: 1.8px solid black;
+  border-top: 2px solid black;
 }
 
 .bottom-border {
-  border-bottom: 1.8px solid black;
+  border-bottom: 2px solid black;
 }
 
 .left-border {
-  border-left: 1.8px solid black;
+  border-left: 2px solid black;
 }
 
 .right-border {
-  border-right: 1.8px solid black;
+  border-right: 2px solid black;
+}
+
+.conflict-highlight {
+  background-color: rgba(218, 218, 218, 0.233);
+  color: orange;
+}
+
+.correct-position {
+  background-color: rgba(218, 218, 218, 0.233);
 }
 
 frame {
