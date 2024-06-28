@@ -32,24 +32,29 @@ class Generator:
         return False
 
     def is_number_in_subgrid(self, number: int | str, row: int, column: int) -> bool:
-        subgrid_row_size: int = 0
-        subgrid_col_size: int = 0
-        subgrid_size: int = 0
-
         if self.size == 6:
-            subgrid_row_size, subgrid_col_size = 2, 3
+            subgrid_row_start = (row // 2) * 2
+            subgrid_col_start = (column // 3) * 3
+            subgrid_row_end = subgrid_row_start + 1
+            subgrid_col_end = subgrid_col_start + 2
+
+            for row in range(subgrid_row_start, subgrid_row_end + 1):
+                for column in range(subgrid_col_start, subgrid_col_end + 1):
+                    if self.board[row][column] == number:
+                        return True
+            return False
         else:
             subgrid_size = floor(sqrt(self.size))
             subgrid_row_size, subgrid_col_size = subgrid_size, subgrid_size
 
-        subgrid_row = row - row % subgrid_row_size
-        subgrid_column = column - column % subgrid_col_size
+            subgrid_row = row - row % subgrid_row_size
+            subgrid_column = column - column % subgrid_col_size
 
-        for row in range(subgrid_row, subgrid_row + subgrid_size):
-            for column in range(subgrid_column, subgrid_column + subgrid_size):
-                if self.board[row][column] == number:
-                    return True
-        return False
+            for row in range(subgrid_row, subgrid_row + subgrid_size):
+                for column in range(subgrid_column, subgrid_column + subgrid_size):
+                    if self.board[row][column] == number:
+                        return True
+            return False
 
     def is_valid_position(self, number: int | str, row: int, column: int) -> bool:
         return (
@@ -87,42 +92,29 @@ class Generator:
                 self.board[row][column] = 0
                 limit -= 1
 
-    def generate_limit(self) -> int:
-        limit: int = 0
-        if self.difficulty.upper() == "EASY":
-            match self.size:
-                case 6:
-                    limit = random.randint(8, 11)
-                case 9:
-                    limit = random.randint(20, 27)
-        elif self.difficulty.upper() == "MEDIUM":
-            match self.size:
-                case 6:
-                    limit = random.randint(11, 15)
-                case 9:
-                    limit = random.randint(28, 37)
-                case 16:
-                    limit = random.randint(58, 77)
-        elif self.difficulty.upper() == "HARD":
-            match self.size:
-                case 6:
-                    limit = random.randint(15, 18)
-                case 9:
-                    limit = random.randint(38, 47)
-                case 16:
-                    limit = random.randint(78, 97)
-        elif self.difficulty.upper() == "EXPERT":
-            match self.size:
-                case 6:
-                    limit = random.randint(18, 20)
-                case 9:
-                    limit = random.randint(48, 57)
-                case 16:
-                    limit = random.randint(98, 117)
-        return limit
-
     def generate_board(self) -> list[list[int | str]]:
+        limit: dict[str, dict[int, int]] = {
+            "EASY": {6: random.randint(9, 12), 9: random.randint(20, 27)},
+            "MEDIUM": {
+                6: random.randint(12, 15),
+                9: random.randint(28, 37),
+                16: random.randint(58, 77),
+            },
+            "HARD": {
+                6: random.randint(15, 18),
+                9: random.randint(38, 47),
+                16: random.randint(78, 97),
+            },
+            "EXPERT": {
+                6: random.randint(22, 25),
+                9: random.randint(48, 57),
+                16: random.randint(98, 117),
+            },
+        }
+
         self.populate_numbers_in_board()
 
-        self.remove_numbers_at_random_positions(limit=self.generate_limit())
+        self.remove_numbers_at_random_positions(
+            limit=limit[self.difficulty.upper()][self.size]
+        )
         return self.board

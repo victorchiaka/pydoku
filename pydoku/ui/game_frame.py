@@ -13,6 +13,9 @@ class GridFrame(Gtk.Frame):
         self.set_vexpand(True)
         self.add_css_class("grid-frame")
 
+        self.solved_board = solved_board
+        self.entries = []
+
         grid = Gtk.Grid()
         grid.set_column_homogeneous(True)
         grid.set_row_homogeneous(True)
@@ -25,6 +28,7 @@ class GridFrame(Gtk.Frame):
             )
 
         for row in range(board_size):
+            row_entries = []
             for column in range(board_size):
                 entry = Gtk.Entry()
                 if board_size == 6:
@@ -36,13 +40,14 @@ class GridFrame(Gtk.Frame):
                 entry.set_alignment(0.5)
                 entry_text: str = str(board[row][column])
                 if entry_text == "0":
-                    entry_text = ""
-                    entry.set_text(entry_text)
+                    entry.set_text("")
+                    entry.connect("changed", self.on_entry_change, row, column)
                 else:
                     entry.set_text(entry_text)
                     entry.set_editable(False)
                     entry.add_css_class("filled-entry")
                 grid.attach(entry, column, row, 1, 1)
+                row_entries.append(entry)
 
                 if row % subgrid_rows == 0 and row != 0:
                     entry.get_style_context().add_class("top-border")
@@ -52,8 +57,46 @@ class GridFrame(Gtk.Frame):
                     entry.get_style_context().add_class("bottom-border")
                 if (column + 1) % subgrid_cols == 0 and (column + 1) != board_size:
                     entry.get_style_context().add_class("right-border")
+            self.entries.append(row_entries)
 
         self.set_child(grid)
+
+    def on_entry_change(self, _widget, row, column):
+        choice = _widget.get_text()
+        print("correct number: ", self.solved_board[row][column])
+
+        _widget.remove_css_class("correct-position")
+        _widget.remove_css_class("filled-entry")
+
+        if str(choice) == "":
+            self.remove_highlights()
+            return
+
+        if str(self.solved_board[row][column]) == str(choice):
+            _widget.add_css_class("correct-position")
+            _widget.set_editable(False)
+        else:
+            self.highlight_similar(choice)
+
+        print(choice, row, column)
+
+    def highlight_similar(self, choice) -> None:
+        for row in range(len(self.solved_board)):
+            for column in range(len(self.solved_board[row])):
+                entry = self.get_entry_at_position(row, column)
+                if entry.get_text() == choice:
+                    entry.add_css_class("conflict-highlight")
+                else:
+                    entry.remove_css_class("conflict-highlight")
+
+    def remove_highlights(self) -> None:
+        for row in range(len(self.solved_board)):
+            for column in range(len(self.solved_board[row])):
+                entry = self.get_entry_at_position(row, column)
+                entry.remove_css_class("conflict-highlight")
+
+    def get_entry_at_position(self, row, column):
+        return self.entries[row][column]
 
 
 class SideFrame(Gtk.Frame):
