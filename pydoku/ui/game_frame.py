@@ -63,7 +63,6 @@ class GridFrame(Gtk.Frame):
 
     def on_entry_change(self, _widget, row, column):
         choice = _widget.get_text()
-        print("correct number: ", self.solved_board[row][column])
 
         _widget.remove_css_class("correct-position")
         _widget.remove_css_class("filled-entry")
@@ -77,8 +76,6 @@ class GridFrame(Gtk.Frame):
             _widget.set_editable(False)
         else:
             self.highlight_similar(choice)
-
-        print(choice, row, column)
 
     def highlight_similar(self, choice) -> None:
         for row in range(len(self.solved_board)):
