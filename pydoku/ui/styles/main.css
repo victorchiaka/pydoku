@@ -21,6 +21,10 @@
   font-size: 30px;
 }
 
+.time-out {
+  color: red;
+}
+
 .action-button {
   padding: 8px 20px;
   font-size: 15px;
@@ -67,7 +71,7 @@ entry {
 }
 
 .correct-position {
-  background-color: rgba(102, 149, 155, 0.623);;
+  background-color: rgba(102, 149, 155, 0.623);
 }
 
 frame {

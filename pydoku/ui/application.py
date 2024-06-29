@@ -5,7 +5,7 @@ from algorithms.solver import Solver
 from .game_frame import GridFrame, SideFrame
 
 gi.require_version(namespace="Gtk", version="4.0")
-from gi.repository import Gtk, Gio
+from gi.repository import Gtk, Gio, Gdk
 
 from ..constants import MAIN_CSS, MENU_XML, LICENSE
 from ..utils import load_css
@@ -130,12 +130,13 @@ class MainApplication(Gtk.Application):
         grid_frame = GridFrame(board, solved_board, self.board_size)
         game_box.append(grid_frame)
 
-        side_frame = SideFrame()
+        self.timer = 300
+        self.side_frame = SideFrame(timer=self.timer)
 
         grid_frame.set_size_request(560, -1)
-        side_frame.set_size_request(240, -1)
+        self.side_frame.set_size_request(240, -1)
 
-        game_box.append(side_frame)
+        game_box.append(self.side_frame)
         self.stack.append(game_box)
         self.window.set_child(game_box)
 
@@ -149,6 +150,10 @@ class MainApplication(Gtk.Application):
         quit_action = Gio.SimpleAction.new("quit", None)
         quit_action.connect("activate", self.on_quit)
         self.add_action(quit_action)
+
+        self.set_time_action = Gio.SimpleAction.new("set_time", None)
+        self.set_time_action.connect("activate", self.on_set_time)
+        self.add_action(self.set_time_action)
 
     def on_about(self, _action, _param):
         about_dialog = Gtk.AboutDialog(transient_for=self.window, modal=True)
@@ -178,3 +183,49 @@ class MainApplication(Gtk.Application):
 
     def on_quit(self, _action, _param):
         self.quit()
+
+    def on_set_time(self, _action, _param):
+        popover = Gtk.Popover()
+        popover.set_position(Gtk.PositionType.BOTTOM)
+        popover.set_has_arrow(True)
+
+        grid = Gtk.Grid()
+        grid.set_row_spacing(10)
+        grid.set_column_spacing(10)
+        minutes_label = Gtk.Label(label="Minutes:")
+        grid.attach(minutes_label, 0, 0, 1, 1)
+
+        minutes_adjustment = Gtk.Adjustment.new(0, 0, 20, 1, 5, 0)
+        self.minutes_spin_button = Gtk.SpinButton(
+            adjustment=minutes_adjustment, climb_rate=1, digits=0
+        )
+        grid.attach(self.minutes_spin_button, 1, 0, 1, 1)
+        seconds_label = Gtk.Label(label="Seconds:")
+        grid.attach(seconds_label, 0, 1, 1, 1)
+
+        seconds_adjustment = Gtk.Adjustment.new(0, 0, 59, 1, 5, 0)
+        self.seconds_spin_button = Gtk.SpinButton(
+            adjustment=seconds_adjustment, climb_rate=1, digits=0
+        )
+        grid.attach(self.seconds_spin_button, 1, 1, 1, 1)
+        adjust_button = Gtk.Button(label="Set Timer")
+        adjust_button.connect("clicked", self.on_adjust_timer_clicked)
+        grid.attach(adjust_button, 0, 2, 2, 1)
+
+        popover.set_child(grid)
+        popover.set_parent(self.window)
+
+        allocation = self.header_bar.get_allocation()
+        rect = Gdk.Rectangle()
+        rect.x = 650
+        rect.y = allocation.y + allocation.height
+        popover.set_pointing_to(rect)
+        popover.show()
+
+    def on_adjust_timer_clicked(self, button):
+        minutes = self.minutes_spin_button.get_value_as_int()
+        seconds = self.seconds_spin_button.get_value_as_int()
+
+        self.timer = minutes * 60 + seconds
+        if hasattr(self, "side_frame") and self.side_frame:
+            self.side_frame.update_timer_label(self.timer)

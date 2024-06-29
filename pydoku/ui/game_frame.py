@@ -1,7 +1,7 @@
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib
 
 from math import floor, sqrt
 
@@ -97,8 +97,12 @@ class GridFrame(Gtk.Frame):
 
 
 class SideFrame(Gtk.Frame):
-    def __init__(self) -> None:
+    def __init__(self, timer: int) -> None:
         super().__init__()
+
+        self.timer = timer
+        self.seconds = self.timer % 60
+        self.minutes = (self.timer // 60) % 60
 
         side_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         side_box.set_hexpand(True)
@@ -106,14 +110,14 @@ class SideFrame(Gtk.Frame):
         side_box.set_spacing(0)
         side_box.set_homogeneous(False)
 
-        time_box = Gtk.Box()
-        time_box.set_hexpand(True)
-        time_box.set_vexpand(True)
-        time_box.set_halign(Gtk.Align.CENTER)
-        time_box.set_valign(Gtk.Align.CENTER)
-        time_label = Gtk.Label(label="00:00")
-        time_label.add_css_class("time-label")
-        time_box.append(time_label)
+        timer_box = Gtk.Box()
+        timer_box.set_hexpand(True)
+        timer_box.set_vexpand(True)
+        timer_box.set_halign(Gtk.Align.CENTER)
+        timer_box.set_valign(Gtk.Align.CENTER)
+        self.time_label = Gtk.Label(label=f"{self.minutes:02}:{self.seconds:02}")
+        self.time_label.add_css_class("time-label")
+        timer_box.append(self.time_label)
 
         action_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
         action_box.set_hexpand(True)
@@ -126,6 +130,29 @@ class SideFrame(Gtk.Frame):
             action_button.add_css_class("action-button")
             action_box.append(action_button)
 
-        side_box.append(time_box)
+        side_box.append(timer_box)
         side_box.append(action_box)
+
         self.set_child(side_box)
+
+        self.start_timer()
+
+    def update_timer_label(self, timer):
+        self.timer = timer
+        self.seconds = self.timer % 60
+        self.minutes = (self.timer // 60) % 60
+        self.time_label.set_text(f"{self.minutes:02}:{self.seconds:02}")
+
+    def start_timer(self):
+        GLib.timeout_add_seconds(1, self.update_timer)
+
+    def update_timer(self):
+        if self.timer > 1:
+            self.timer -= 1
+            self.seconds = self.timer % 60
+            self.minutes = (self.timer // 60) % 60
+            self.time_label.set_text(f"{self.minutes:02}:{self.seconds:02}")
+            return True
+        self.time_label.set_text("TIME OUT")
+        self.time_label.add_css_class("time-out")
+        return False
