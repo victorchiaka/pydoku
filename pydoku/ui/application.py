@@ -5,7 +5,7 @@ from algorithms.solver import Solver
 from .game_frame import GridFrame, SideFrame
 
 gi.require_version(namespace="Gtk", version="4.0")
-from gi.repository import Gtk, Gio, Gdk
+from gi.repository import Gtk, Gio, Gdk, GLib
 
 from ..constants import MAIN_CSS, MENU_XML, LICENSE
 from ..utils import load_css
@@ -24,6 +24,8 @@ class MainApplication(Gtk.Application):
 
         load_css(css_file=MAIN_CSS)
         self.window = None
+        self.initial_board = None
+        self.timer_id = None
 
         self.stack = []
 
@@ -106,20 +108,22 @@ class MainApplication(Gtk.Application):
         self.window.set_child(self.difficulty_box)
 
     def show_sudoku_gameplay_screen(self, _widget, difficulty: str) -> None:
-        board: list[list[int | str]] = Generator(
-            difficulty=difficulty, size=self.board_size
-        ).generate_board()
+        if not self.initial_board:
+            self.initial_board = Generator(
+                difficulty=difficulty, size=self.board_size
+            ).generate_board()
+        self.current_difficulty = difficulty
 
-        board_copy: list[list[int | str]] = [
+        self.board_copy: list[list[int | str]] = [
             [0 for _ in range(self.board_size)] for _ in range(self.board_size)
         ]
 
         for row in range(self.board_size):
             for column in range(self.board_size):
-                board_copy[row][column] = board[row][column]
+                self.board_copy[row][column] = self.initial_board[row][column]
 
-        solved_board: list[list[int | str]] = Solver(
-            board=board_copy, size=self.board_size
+        self.solved_board: list[list[int | str]] = Solver(
+            board=self.board_copy, size=self.board_size
         ).solve_board()
 
         game_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
@@ -127,13 +131,21 @@ class MainApplication(Gtk.Application):
         if not self.window:
             self.window = MainApplicationWindow(application=self, title="Pydoku")
             self.window.set_child(self.game_box)
-        grid_frame = GridFrame(board, solved_board, self.board_size)
-        game_box.append(grid_frame)
+        self.grid_frame = GridFrame(
+            self.initial_board, self.solved_board, self.board_size
+        )
+        game_box.append(self.grid_frame)
 
         self.timer = 300
-        self.side_frame = SideFrame(timer=self.timer)
+        self.side_frame = SideFrame(
+            timer=self.timer,
+            restart_callback=self.restart_game,
+            pause_callback=self.pause_game,
+            new_board_callback=self.new_board,
+            time_up_callback=self.time_up,
+        )
 
-        grid_frame.set_size_request(560, -1)
+        self.grid_frame.set_size_request(560, -1)
         self.side_frame.set_size_request(240, -1)
 
         game_box.append(self.side_frame)
@@ -229,3 +241,72 @@ class MainApplication(Gtk.Application):
         self.timer = minutes * 60 + seconds
         if hasattr(self, "side_frame") and self.side_frame:
             self.side_frame.update_timer_label(self.timer)
+
+    def restart_game(self):
+        self.show_sudoku_gameplay_screen(None, self.current_difficulty)
+
+    def pause_game(self):
+        if self.side_frame.timer_id:
+            GLib.source_remove(self.side_frame.timer_id)
+        self.show_pause_modal()
+
+    def new_board(self):
+        self.initial_board = None
+        self.show_sudoku_gameplay_screen(None, self.current_difficulty)
+
+    def resume_game(self, _widget):
+        self.side_frame.start_timer()
+        if not self.window:
+            self.window = MainApplicationWindow(application=self, title="Pydoku")
+        self.window.set_child(self.stack[-1])
+
+    def show_pause_modal(self):
+        if not self.window:
+            self.window = MainApplicationWindow(application=self, title="Pydoku")
+
+        overlay = Gtk.Overlay()
+        overlay.set_halign(Gtk.Align.FILL)
+        overlay.set_valign(Gtk.Align.FILL)
+
+        background = Gtk.Box()
+        allocation = self.window.get_allocation()
+        background.set_size_request(allocation.width, allocation.height)
+        background.get_style_context().add_class("modal-background")
+
+        modal_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        modal_box.set_halign(Gtk.Align.CENTER)
+        modal_box.set_valign(Gtk.Align.CENTER)
+        modal_box.set_margin_top(50)
+        modal_box.set_margin_bottom(50)
+        modal_box.set_margin_start(50)
+        modal_box.set_margin_end(50)
+        modal_box.set_size_request(300, 200)
+        modal_box.add_css_class("modal-box")
+
+        paused_label = Gtk.Label(label="Game Paused")
+        paused_label.add_css_class("game-paused-label")
+        modal_box.append(paused_label)
+
+        continue_button = Gtk.Button(label="Continue")
+        continue_button.set_halign(Gtk.Align.CENTER)
+        continue_button.add_css_class("continue-button")
+        continue_button.connect("clicked", self.resume_game)
+        modal_box.append(continue_button)
+
+        overlay.add_overlay(background)
+        overlay.add_overlay(modal_box)
+        self.window.set_child(overlay)
+
+    def count_empty_entries(self, row):
+        return len([entry for entry in row if entry.get_text() == ""])
+
+    def time_up(self):
+        for row in self.grid_frame.entries:
+            for entry in row:
+                entry.set_editable(False)
+            if self.count_empty_entries(row) > 0:
+                self.side_frame.time_label.set_text("You lost")
+                break
+            else:
+                self.side_frame.time_label.set_text("You won")
+                self.side_frame.time_label.add_css_class("win-message")

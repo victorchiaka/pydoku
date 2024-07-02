@@ -21,7 +21,7 @@
   font-size: 30px;
 }
 
-.time-out {
+.time-up {
   color: red;
 }
 
@@ -81,4 +81,17 @@ frame {
 .grid-frame {
   padding: 20px;
   border: 0px;
+}
+
+.game-paused-label {
+  color: green;
+  font-size: 40px;
+}
+
+.win-message {
+  color: green;
+}
+
+.continue-button {
+  padding: 8px 20px;
 }

@@ -16,9 +16,9 @@ class GridFrame(Gtk.Frame):
         self.solved_board = solved_board
         self.entries = []
 
-        grid = Gtk.Grid()
-        grid.set_column_homogeneous(True)
-        grid.set_row_homogeneous(True)
+        self.grid = Gtk.Grid()
+        self.grid.set_column_homogeneous(True)
+        self.grid.set_row_homogeneous(True)
 
         if board_size == 6:
             subgrid_rows, subgrid_cols = 2, 3
@@ -46,7 +46,7 @@ class GridFrame(Gtk.Frame):
                     entry.set_text(entry_text)
                     entry.set_editable(False)
                     entry.add_css_class("filled-entry")
-                grid.attach(entry, column, row, 1, 1)
+                self.grid.attach(entry, column, row, 1, 1)
                 row_entries.append(entry)
 
                 if row % subgrid_rows == 0 and row != 0:
@@ -59,7 +59,7 @@ class GridFrame(Gtk.Frame):
                     entry.get_style_context().add_class("right-border")
             self.entries.append(row_entries)
 
-        self.set_child(grid)
+        self.set_child(self.grid)
 
     def on_entry_change(self, _widget, row, column):
         choice = _widget.get_text()
@@ -97,12 +97,25 @@ class GridFrame(Gtk.Frame):
 
 
 class SideFrame(Gtk.Frame):
-    def __init__(self, timer: int) -> None:
+    def __init__(
+        self,
+        timer: int,
+        restart_callback,
+        pause_callback,
+        new_board_callback,
+        time_up_callback,
+    ) -> None:
         super().__init__()
+
+        self.restart_callback = restart_callback
+        self.pause_callback = pause_callback
+        self.new_board_callback = new_board_callback
+        self.time_up_callback = time_up_callback
 
         self.timer = timer
         self.seconds = self.timer % 60
         self.minutes = (self.timer // 60) % 60
+        self.timer_id = None
 
         side_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         side_box.set_hexpand(True)
@@ -124,9 +137,10 @@ class SideFrame(Gtk.Frame):
         action_box.set_vexpand(True)
         action_box.set_halign(Gtk.Align.CENTER)
         action_box.set_valign(Gtk.Align.CENTER)
-        actions = ["Stop", "Restart", "Pause"]
+        actions = ["Pause", "Restart", "New board"]
         for action in actions:
             action_button = Gtk.Button(label=action)
+            action_button.connect("clicked", self.on_sideframe_action, action)
             action_button.add_css_class("action-button")
             action_box.append(action_button)
 
@@ -137,6 +151,14 @@ class SideFrame(Gtk.Frame):
 
         self.start_timer()
 
+    def on_sideframe_action(self, _widget, _param) -> None:
+        if _param == "Restart":
+            self.restart_callback()
+        elif _param == "Pause":
+            self.pause_callback()
+        elif _param == "New board":
+            self.new_board_callback()
+
     def update_timer_label(self, timer):
         self.timer = timer
         self.seconds = self.timer % 60
@@ -144,15 +166,21 @@ class SideFrame(Gtk.Frame):
         self.time_label.set_text(f"{self.minutes:02}:{self.seconds:02}")
 
     def start_timer(self):
-        GLib.timeout_add_seconds(1, self.update_timer)
+        if self.timer_id:
+            GLib.source_remove(self.timer_id)
+        self.timer_id = GLib.timeout_add_seconds(1, self.update_timer)
 
     def update_timer(self):
+        if self.time_label.get_text() == "TIME'S UP":
+            self.time_up_callback()
+
         if self.timer > 1:
             self.timer -= 1
             self.seconds = self.timer % 60
             self.minutes = (self.timer // 60) % 60
             self.time_label.set_text(f"{self.minutes:02}:{self.seconds:02}")
             return True
-        self.time_label.set_text("TIME OUT")
-        self.time_label.add_css_class("time-out")
+        self.time_label.set_text("TIME'S UP")
+        self.time_label.add_css_class("time-up")
+        self.time_up_callback()
         return False
