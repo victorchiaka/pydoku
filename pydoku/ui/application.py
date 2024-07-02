@@ -139,6 +139,7 @@ class MainApplication(Gtk.Application):
             timer=self.timer,
             restart_callback=self.restart_game,
             pause_callback=self.pause_game,
+            new_board_callback=self.new_board,
         )
 
         grid_frame.set_size_request(560, -1)
@@ -239,15 +240,16 @@ class MainApplication(Gtk.Application):
             self.side_frame.update_timer_label(self.timer)
 
     def restart_game(self):
-        if hasattr(self, "game_box") and self.game_box:
-            self.game_box.destroy()
-
         self.show_sudoku_gameplay_screen(None, self.current_difficulty)
 
     def pause_game(self):
         if self.side_frame.timer_id:
             GLib.source_remove(self.side_frame.timer_id)
         self.show_pause_modal()
+
+    def new_board(self):
+        self.initial_board = None
+        self.show_sudoku_gameplay_screen(None, self.current_difficulty)
 
     def resume_game(self, _widget):
         self.side_frame.start_timer()

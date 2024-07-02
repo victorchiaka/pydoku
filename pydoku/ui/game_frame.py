@@ -97,12 +97,16 @@ class GridFrame(Gtk.Frame):
 
 
 class SideFrame(Gtk.Frame):
-    def __init__(self, timer: int, restart_callback, pause_callback) -> None:
+    def __init__(
+        self, timer: int, restart_callback, pause_callback, new_board_callback
+    ) -> None:
         super().__init__()
 
-        self.timer = timer
         self.restart_callback = restart_callback
         self.pause_callback = pause_callback
+        self.new_board_callback = new_board_callback
+
+        self.timer = timer
         self.seconds = self.timer % 60
         self.minutes = (self.timer // 60) % 60
         self.timer_id = None
@@ -146,6 +150,8 @@ class SideFrame(Gtk.Frame):
             self.restart_callback()
         elif _param == "Pause":
             self.pause_callback()
+        elif _param == "New board":
+            self.new_board_callback()
 
     def update_timer_label(self, timer):
         self.timer = timer
