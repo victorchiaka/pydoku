@@ -82,3 +82,12 @@ frame {
   padding: 20px;
   border: 0px;
 }
+
+.game-paused-label {
+  color: green;
+  font-size: 40px;
+}
+
+.continue-button {
+  padding: 8px 20px;
+}
