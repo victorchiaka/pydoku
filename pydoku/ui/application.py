@@ -131,8 +131,10 @@ class MainApplication(Gtk.Application):
         if not self.window:
             self.window = MainApplicationWindow(application=self, title="Pydoku")
             self.window.set_child(self.game_box)
-        grid_frame = GridFrame(self.initial_board, self.solved_board, self.board_size)
-        game_box.append(grid_frame)
+        self.grid_frame = GridFrame(
+            self.initial_board, self.solved_board, self.board_size
+        )
+        game_box.append(self.grid_frame)
 
         self.timer = 300
         self.side_frame = SideFrame(
@@ -140,9 +142,10 @@ class MainApplication(Gtk.Application):
             restart_callback=self.restart_game,
             pause_callback=self.pause_game,
             new_board_callback=self.new_board,
+            time_up_callback=self.time_up,
         )
 
-        grid_frame.set_size_request(560, -1)
+        self.grid_frame.set_size_request(560, -1)
         self.side_frame.set_size_request(240, -1)
 
         game_box.append(self.side_frame)
@@ -293,3 +296,17 @@ class MainApplication(Gtk.Application):
         overlay.add_overlay(background)
         overlay.add_overlay(modal_box)
         self.window.set_child(overlay)
+
+    def count_empty_entries(self, row):
+        return len([entry for entry in row if entry.get_text() == ""])
+
+    def time_up(self):
+        for row in self.grid_frame.entries:
+            for entry in row:
+                entry.set_editable(False)
+            if self.count_empty_entries(row) > 0:
+                self.side_frame.time_label.set_text("You lost")
+                break
+            else:
+                self.side_frame.time_label.set_text("You won")
+                self.side_frame.time_label.add_css_class("win-message")
