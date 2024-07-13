@@ -7,13 +7,14 @@ from math import floor, sqrt
 
 
 class GridFrame(Gtk.Frame):
-    def __init__(self, board, solved_board, board_size, **kwargs) -> None:
+    def __init__(self, board, solved_board, board_size, side_frame, **kwargs) -> None:
         super().__init__(**kwargs)
         self.set_hexpand(True)
         self.set_vexpand(True)
         self.add_css_class("grid-frame")
 
         self.solved_board = solved_board
+        self.side_frame = side_frame
         self.entries = []
 
         self.grid = Gtk.Grid()
@@ -38,7 +39,7 @@ class GridFrame(Gtk.Frame):
                 entry.set_max_width_chars(1)
                 entry.set_width_chars(1)
                 entry.set_alignment(0.5)
-                entry_text: str = str(board[row][column])
+                entry_text = str(board[row][column])
                 if entry_text == "0":
                     entry.set_text("")
                     entry.connect("changed", self.on_entry_change, row, column)
@@ -74,6 +75,7 @@ class GridFrame(Gtk.Frame):
         if str(self.solved_board[row][column]) == str(choice):
             _widget.add_css_class("correct-position")
             _widget.set_editable(False)
+            self.check_winning()
         else:
             self.highlight_similar(choice)
 
@@ -95,11 +97,29 @@ class GridFrame(Gtk.Frame):
     def get_entry_at_position(self, row, column):
         return self.entries[row][column]
 
+    def count_empty_entries(self):
+        count = 0
+        for row in self.entries:
+            for entry in row:
+                if entry.get_text() == "":
+                    count += 1
+        return count
+
+    def check_winning(self):
+        if self.count_empty_entries() == 0 and self.side_frame.timer > 1:
+            self.side_frame.time_label.set_text("You won")
+            self.side_frame.time_label.add_css_class("win-message")
+            GLib.source_remove(self.side_frame.timer_id)
+            self.side_frame.timer_id = None
+
+    def get_current_board_state(self):
+        return [[entry.get_text() for entry in row] for row in self.entries]
+
 
 class SideFrame(Gtk.Frame):
     def __init__(
         self,
-        timer: int,
+        timer,
         restart_callback,
         pause_callback,
         new_board_callback,

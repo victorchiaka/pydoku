@@ -1,4 +1,4 @@
-import gi
+import csv, os, gi
 
 from algorithms.generator import Generator
 from algorithms.solver import Solver
@@ -16,6 +16,10 @@ class MainApplicationWindow(Gtk.ApplicationWindow):
         super().__init__(**kwargs)
         self.set_default_size(800, 600)
         self.set_resizable(False)
+        self.connect("close-request", self.on_destroy)
+
+    def on_destroy(self, _action):
+        self.get_application().on_quit(_action, None)
 
 
 class MainApplication(Gtk.Application):
@@ -24,10 +28,17 @@ class MainApplication(Gtk.Application):
 
         load_css(css_file=MAIN_CSS)
         self.window = None
-        self.initial_board = None
         self.timer_id = None
+        self.current_difficulty = None
+        self.solved_board = []
+        self.initial_board = None
+        self.generated_board = []
+        self.current_time = None
+        self.difficulty = None
+        self.header_bar = Gtk.HeaderBar()
 
         self.stack = []
+        self.current_board_state = []
 
     def do_activate(self):
         if not self.window:
@@ -41,7 +52,6 @@ class MainApplication(Gtk.Application):
             grid_type_box.set_hexpand(True)
             grid_type_box.set_vexpand(True)
 
-            self.header_bar = Gtk.HeaderBar()
             self.window.set_titlebar(self.header_bar)
 
             image = Gtk.Image.new_from_icon_name("open-menu-symbolic")
@@ -52,7 +62,7 @@ class MainApplication(Gtk.Application):
             menu.set_child(image)
             self.header_bar.pack_end(menu)
 
-            grid_types: list[dict[str, str]] = [
+            grid_types = [
                 {"type": "6x6", "value": "6"},
                 {"type": "9x9", "value": "9"},
                 {"type": "16x16", "value": "16"},
@@ -75,12 +85,13 @@ class MainApplication(Gtk.Application):
         self.window.present()
 
     def show_difficulty_type(self, _widget, board_size):
+        self.initial_board = None
         self.board_size = board_size
         self.difficulty_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.difficulty_box.set_halign(Gtk.Align.CENTER)
         self.difficulty_box.set_valign(Gtk.Align.CENTER)
 
-        difficulty_label: Gtk.Label = Gtk.Label(label="Select difficulty")
+        difficulty_label = Gtk.Label(label="Select difficulty")
         difficulty_label.add_css_class("difficulty-label")
         self.difficulty_box.append(difficulty_label)
 
@@ -90,10 +101,10 @@ class MainApplication(Gtk.Application):
             else ["Easy", "Medium", "Hard", "Expert"]
         )
 
-        for difficulty in self.difficulties:
-            button = Gtk.Button(label=difficulty)
+        for self.difficulty in self.difficulties:
+            button = Gtk.Button(label=self.difficulty)
             button.add_css_class("difficulty-button")
-            button.connect("clicked", self.show_sudoku_gameplay_screen, difficulty)
+            button.connect("clicked", self.show_sudoku_gameplay_screen, self.difficulty)
             self.difficulty_box.append(button)
 
         if not self.window:
@@ -107,7 +118,7 @@ class MainApplication(Gtk.Application):
         self.stack.append(self.difficulty_box)
         self.window.set_child(self.difficulty_box)
 
-    def show_sudoku_gameplay_screen(self, _widget, difficulty: str) -> None:
+    def show_sudoku_gameplay_screen(self, _widget, difficulty) -> None:
         if not self.initial_board:
             self.initial_board = Generator(
                 difficulty=difficulty, size=self.board_size
@@ -131,26 +142,100 @@ class MainApplication(Gtk.Application):
         if not self.window:
             self.window = MainApplicationWindow(application=self, title="Pydoku")
             self.window.set_child(self.game_box)
-        self.grid_frame = GridFrame(
-            self.initial_board, self.solved_board, self.board_size
-        )
-        game_box.append(self.grid_frame)
 
         self.timer = 300
         self.side_frame = SideFrame(
-            timer=self.timer,
-            restart_callback=self.restart_game,
-            pause_callback=self.pause_game,
-            new_board_callback=self.new_board,
-            time_up_callback=self.time_up,
+            self.timer,
+            self.restart_game,
+            self.pause_game,
+            self.new_board,
+            self.time_up,
+        )
+        self.side_frame.set_size_request(240, -1)
+
+        self.grid_frame = GridFrame(
+            self.initial_board, self.solved_board, self.board_size, self.side_frame
         )
 
         self.grid_frame.set_size_request(560, -1)
-        self.side_frame.set_size_request(240, -1)
+        game_box.append(self.grid_frame)
 
         game_box.append(self.side_frame)
         self.stack.append(game_box)
         self.window.set_child(game_box)
+
+    def read_game_data(self):
+        file_path = os.path.join(os.path.dirname(__file__), "game_data.csv")
+        if not os.path.exists(file_path):
+            print(f"File not found: {file_path}")
+            return None
+
+        game_data = {}
+        try:
+            with open(file_path, mode="r") as file:
+                reader = csv.DictReader(file)
+                for row in reader:
+                    for key, value in row.items():
+                        game_data[key] = (
+                            eval(value)
+                            if key
+                            in [
+                                "self.initial_board",
+                                "self.current_board_state",
+                                "self.solved_board",
+                                "self.generated_board",
+                                "self.stack",
+                                "self.current_time",
+                                "self.difficulty",
+                                "self.header_bar",
+                            ]
+                            else value
+                        )
+            print("Game data loaded successfully:", game_data)
+        except Exception as e:
+            print(f"Error reading game data: {e}")
+
+        return game_data
+
+    def initialize_game_from_data(self, game_data):
+        if not game_data:
+            print("No game data to initialize.")
+            return
+
+        try:
+            self.initial_board = game_data.get("initial_board")
+            self.current_board_state = game_data.get("current_board_state")
+            self.solved_board = game_data.get("solved_board")
+            self.generated_board = game_data.get("generated_board")
+            self.board_size = int(game_data.get("board_size", 9))
+            self.current_difficulty = game_data.get("difficulty")
+            self.timer = int(game_data.get("timer", 300))
+
+            self.stack = game_data.get("stack", [])
+
+            if self.stack:
+                if not self.window:
+                    self.window = MainApplicationWindow(
+                        application=self, title="Pydoku"
+                    )
+
+                # Properly re-construct the stack of UI components
+                for ui_element in self.stack:
+                    if isinstance(ui_element, Gtk.Grid):
+                        print("Reconstructed a Gtk.Grid")
+                    elif isinstance(ui_element, Gtk.Box):
+                        print("Reconstructed a Gtk.Box")
+                    # Add more checks as needed to reconstruct other UI elements
+
+                # Set the last UI element in the stack as the current child
+                last_screen = self.stack[-1]
+                self.window.set_child(last_screen)
+                print("Game UI successfully reconstructed.")
+            else:
+                self.show_difficulty_type(None, self.board_size)
+                print("Showing difficulty type selection.")
+        except Exception as e:
+            print(f"Error initializing game from data: {e}")
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
@@ -166,6 +251,9 @@ class MainApplication(Gtk.Application):
         self.set_time_action = Gio.SimpleAction.new("set_time", None)
         self.set_time_action.connect("activate", self.on_set_time)
         self.add_action(self.set_time_action)
+
+        game_data = self.read_game_data()
+        self.initialize_game_from_data(game_data)
 
     def on_about(self, _action, _param):
         about_dialog = Gtk.AboutDialog(transient_for=self.window, modal=True)
@@ -184,6 +272,7 @@ class MainApplication(Gtk.Application):
         about_dialog.present()
 
     def on_back(self, _widget):
+        self.initial_board = None
         if len(self.stack) > 1:
             self.stack.pop()
             previous_screen = self.stack[-1]
@@ -193,7 +282,33 @@ class MainApplication(Gtk.Application):
         if len(self.stack) == 1:
             self.header_bar.remove(self.quit_button)
 
+    def on_save(self):
+        file_path = os.path.join(os.path.dirname(__file__), "game_data.csv")
+        directory = os.path.dirname(file_path)
+        os.makedirs(directory, exist_ok=True)
+        if hasattr(self, "grid_frame") and self.grid_frame:
+            self.current_board_state = self.grid_frame.get_current_board_state()
+        game_data = {
+            "self.initial_board": self.initial_board,
+            "self.stack": self.stack,
+            "self.current_board_state": self.current_board_state,
+            "self.difficulty": self.current_difficulty,
+            "self.solved_board": self.solved_board,
+            "self.generated_board": self.initial_board,
+            "self.current_time": self.side_frame.timer if self.side_frame else None,
+            "self.header_bar": self.header_bar,
+        }
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+        with open(file_path, mode="w", newline="") as file:
+            writer = csv.writer(file)
+            for key, value in game_data.items():
+                writer.writerow([key, value])
+
+        print(f"Game data saved to f{file_path}")
+
     def on_quit(self, _action, _param):
+        self.on_save()
         self.quit()
 
     def on_set_time(self, _action, _param):
@@ -252,6 +367,7 @@ class MainApplication(Gtk.Application):
 
     def new_board(self):
         self.initial_board = None
+        self.stack.pop()
         self.show_sudoku_gameplay_screen(None, self.current_difficulty)
 
     def resume_game(self, _widget):
@@ -276,14 +392,14 @@ class MainApplication(Gtk.Application):
         modal_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         modal_box.set_halign(Gtk.Align.CENTER)
         modal_box.set_valign(Gtk.Align.CENTER)
-        modal_box.set_margin_top(50)
+        modal_box.set_margin_top(100)
         modal_box.set_margin_bottom(50)
         modal_box.set_margin_start(50)
         modal_box.set_margin_end(50)
         modal_box.set_size_request(300, 200)
         modal_box.add_css_class("modal-box")
 
-        paused_label = Gtk.Label(label="Game Paused")
+        paused_label = Gtk.Label(label="GAME PAUSED")
         paused_label.add_css_class("game-paused-label")
         modal_box.append(paused_label)
 
